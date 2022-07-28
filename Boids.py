@@ -1,5 +1,6 @@
 import numpy as np
 import pygame
+import pygame_gui
 
 # supressing the pygame hello message
 import os
@@ -148,11 +149,14 @@ class Stimulation(BoidsFlock):
 
         pygame.init()
         pygame.display.set_caption("flock simulation")
+        pygame.event.set_allowed([pygame.QUIT, pygame.KEYUP])
         self.FONT = pygame.font.SysFont('ComicNeue-Regular.ttf',18)
+        self.screen = pygame.display.set_mode((screen_width,screen_height))
+        self.clock = pygame.time.Clock()
+        
+        self.ui = pygame_gui.UIManager((screen_width,screen_height))
 
         self.FPS = 60
-        self.screen = pygame.display.set_mode((self.screen_width,self.screen_height))
-        self.clock = pygame.time.Clock()
         self.exit = False
 
     def stimulate(self):
@@ -167,6 +171,9 @@ class Stimulation(BoidsFlock):
                 elif event.type == pygame.KEYUP :
                     if event.key == pygame.K_q : self.exit = True
                     elif event.key == pygame.K_r : self.reset()
+                
+                # call event handling for UI elements
+                self.ui.process_events(event)
 
 
             # # screen movement
@@ -191,15 +198,17 @@ class Stimulation(BoidsFlock):
 
             # if clock.get_fps() > 60 : flock_stimulation.addBoid()
 
-            pygame.display.update()
-            if self.FPS: self.clock.tick(self.FPS)
-            else : self.clock.tick()
+            self.ui.update(time_delta=self.clock.tick(self.FPS)/1000.0) # delta time for UI element timers
+
+            pygame.display.update() # draw the updated drawings onto the screen
+            self.ui.draw_ui(self.screen)
+
 
         pygame.quit()
 
 def main():
 
-    Stimulation(100).stimulate()
+    Stimulation(250).stimulate()
 
 if __name__ == '__main__':
     main()
