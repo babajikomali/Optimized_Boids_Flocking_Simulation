@@ -141,8 +141,10 @@ class BoidsFlock:
 
 class Stimulation(BoidsFlock):
 
-    COLOR_RED = (241, 38, 11)
-    COLOR_GREEN = (124, 252, 0)
+    TEXT_COLOR = (241, 38, 11)
+    BACKGROUND_COLOR = (0,0,0)
+    BOIDS_FILL_COLOR = (124, 252, 0)
+    BOIDS_BORDER_COLOR = (255, 255, 255)
 
     def __init__(self, num_boids: int = 10, screen_width: int = 1200, screen_height: int = 700) -> None:
         super().__init__(num_boids, screen_width, screen_height)
@@ -180,19 +182,17 @@ class Stimulation(BoidsFlock):
             # pressed = pygame.key.get_pressed()
                     
             # rendering
-            self.screen.fill((0, 0, 0))
+            self.screen.fill(Stimulation.BACKGROUND_COLOR)
 
             for i in range(self.boids_pos.shape[0]):
-                pygame.draw.circle(self.screen, (255, 255, 255), self.boids_pos[i,:], 3+1)
-                pygame.draw.circle(self.screen, (0,255,0), self.boids_pos[i,:], 3)
+                pygame.draw.circle(self.screen, Stimulation.BOIDS_BORDER_COLOR, self.boids_pos[i,:], 3+1)
+                pygame.draw.circle(self.screen, Stimulation.BOIDS_FILL_COLOR, self.boids_pos[i,:], 3)
 
             text_y = 10
-            text_surface = self.FONT.render(f"FPS : {int(self.clock.get_fps())}",True,Stimulation.COLOR_RED)
-            self.screen.blit(text_surface,(self.screen_width-150, text_y))
-            text_y += 15
-            text_surface = self.FONT.render(f"Boids : {self.boids}",True,Stimulation.COLOR_RED)
-            self.screen.blit(text_surface,(self.screen_width-150, text_y))
-            text_y += 15
+            text_surface = self.FONT.render(f"FPS : {int(self.clock.get_fps())}",True,Stimulation.TEXT_COLOR)
+            self.screen.blit(text_surface,(self.screen_width-150, text_y)); text_y += 15
+            text_surface = self.FONT.render(f"Boids : {self.boids}",True,Stimulation.TEXT_COLOR)
+            self.screen.blit(text_surface,(self.screen_width-150, text_y)); text_y += 15
 
             self.flock()
 
@@ -208,7 +208,7 @@ class Stimulation(BoidsFlock):
 
 def main():
 
-    Stimulation(250).stimulate()
+    Stimulation(100).stimulate()
 
 if __name__ == '__main__':
     main()
