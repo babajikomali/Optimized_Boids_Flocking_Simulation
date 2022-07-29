@@ -201,7 +201,7 @@ class Stimulation(BoidsFlock):
             self.ui.update(time_delta=self.clock.tick(self.FPS)/1000.0) # delta time for UI element timers
 
             pygame.display.update() # draw the updated drawings onto the screen
-            self.ui.draw_ui(self.screen)
+            self.ui.draw_ui(self.screen) # fraw ui elements to the screen
 
 
         pygame.quit()
