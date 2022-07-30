@@ -98,7 +98,7 @@ class QuadTree:
         else:
             for x in self.points:
                 if circle.isContain(x) and x.idx!=circle.idx:
-                    found.append(x.idx+1)
+                    found.append(int(x.idx+1))
             if self.isDivided:
                 found.extend(self.northeast.query(circle))
                 found.extend(self.northwest.query(circle))
@@ -108,8 +108,8 @@ class QuadTree:
 
 class BoidsFlock:
 
-    ALIGN_RADIUS = 100
-    ALIGN_MAX_FORCE = 0.4
+    ALIGN_RADIUS = 50
+    ALIGN_MAX_FORCE = 5.0
     ALIGN_MAX_SPEED = 4.0
 
     COHESION_RADIUS = 50
@@ -117,8 +117,8 @@ class BoidsFlock:
     COHESION_MAX_SPEED = 4.0
 
     SEPARATION_RADIUS = 50
-    SEPARATION_MAX_FORCE = 10.0
-    SEPARATION_MAX_SPEED = 3.0
+    SEPARATION_MAX_FORCE = 0.2
+    SEPARATION_MAX_SPEED = 4.0
 
     def __init__(self, num_boids: int = 10, screen_width: int = 1200, screen_height: int = 700) -> None:
 
@@ -181,47 +181,62 @@ class BoidsFlock:
             cohesion_indices.append(cohesion_nearby)
             separation_indices.append(separation_nearby)
 
-        # align_idx = np.take(self.boids_pos, separation_nearby, axis = 0)
-        # print(align_indices)
-        # sys.exit()
-        align_idx = np.zeros([len(align_indices),len(max(align_indices,key = lambda x: len(x)))])
-        for i,j in enumerate(align_indices):align_idx[i][0:len(j)] = j
-        cohesion_idx = np.zeros([len(cohesion_indices),len(max(cohesion_indices,key = lambda x: len(x)))])
-        for i,j in enumerate(cohesion_indices):cohesion_idx[i][0:len(j)] = j
-        separation_idx = np.zeros([len(separation_indices),len(max(separation_indices,key = lambda x: len(x)))])
-        for i,j in enumerate(separation_indices):separation_idx[i][0:len(j)] = j
+        align_lens = [len(l) for l in align_indices]
+        align_maxlen = max(align_lens)
+        align_idx = np.zeros((len(align_indices), align_maxlen), int)
+        mask = np.arange(align_maxlen) < np.array(align_lens)[:,None]
+        align_idx[mask] = np.concatenate(align_indices)
 
-        return np.array(align_idx),np.array(cohesion_idx),np.array(separation_idx)
+        cohesion_lens = [len(l) for l in cohesion_indices]
+        cohesion_maxlen = max(cohesion_lens)
+        cohesion_idx = np.zeros((len(cohesion_indices), cohesion_maxlen), int)
+        mask = np.arange(cohesion_maxlen) < np.array(cohesion_lens)[:,None]
+        cohesion_idx[mask] = np.concatenate(cohesion_indices)
+
+        separation_lens = [len(l) for l in separation_indices]
+        separation_maxlen = max(separation_lens)
+        separation_idx = np.zeros((len(separation_indices), separation_maxlen), int)
+        mask = np.arange(separation_maxlen) < np.array(separation_lens)[:,None]
+        separation_idx[mask] = np.concatenate(separation_indices)
+
+        return align_idx,cohesion_idx,separation_idx
 
     def newflock(self):
 
         align_idx,cohesion_idx,separation_idx = self.__flock()
 
-        intalign_idx = align_idx.astype(int)
-        intcohesion_idx = cohesion_idx.astype(int)
-        intseparation_idx = separation_idx.astype(int)
-
         boids_pos = np.insert(self.boids_pos, [0], [0.0], axis=0)
         boids_vel = np.insert(self.boids_vel, [0], [0.0], axis=0)
 
-        align_vel = boids_vel[intalign_idx]
-        cohesion_pos = boids_pos[intcohesion_idx]
-        separation_pos = boids_pos[intseparation_idx]
+        align_vel = boids_vel[align_idx]
+        cohesion_pos = boids_pos[cohesion_idx]
+        separation_pos = boids_pos[separation_idx]
 
         align_steering = np.sum(align_vel,axis=1)
         cohesion_steering = np.sum(cohesion_pos,axis=1)
         separation_steering = np.sum(separation_pos,axis=1)
-
+        
+        align_count = np.count_nonzero(align_idx, axis=1)
+        align_count = np.transpose(align_count)[:, np.newaxis]
+        cohesion_count = np.count_nonzero(cohesion_idx, axis=1)
+        cohesion_count = np.transpose(cohesion_count)[:, np.newaxis]
         separation_count = np.count_nonzero(separation_idx, axis=1)
         separation_count = np.transpose(separation_count)[:, np.newaxis]
+
+        align_count[align_count == 0] = 1
+        cohesion_count[cohesion_count == 0] = 1
+        separation_count[separation_count == 0] = 1
 
         sep_boids_pos = self.boids_pos
         np.broadcast(separation_count,sep_boids_pos)
         separation_steering -= (separation_count*sep_boids_pos)
 
-        align_steering /= np.count_nonzero(align_idx)
-        cohesion_steering /= np.count_nonzero(cohesion_idx)
-        separation_steering /= np.count_nonzero(separation_idx)
+        np.broadcast(align_steering,align_count)
+        align_steering = align_steering/align_count
+        np.broadcast(cohesion_steering,cohesion_count)
+        cohesion_steering = cohesion_steering/cohesion_count
+        np.broadcast(separation_steering,separation_count)
+        separation_steering = separation_steering/separation_count
         
         align_steering -= self.boids_vel
         align_steering = BoidsFlock.setMagnitude(
@@ -248,64 +263,6 @@ class BoidsFlock:
         self.boids_acc = align_steering + cohesion_steering - separation_steering
 
         self.__update()
-
-
-
-
-        # for i,pos in enumerate(self.boids_pos):
-        #     align_circle = Circle(pos[0],pos[1],BoidsFlock.ALIGN_RADIUS)
-        #     cohesion_circle = Circle(pos[0],pos[1],BoidsFlock.COHESION_RADIUS)
-        #     separation_circle = Circle(pos[0],pos[1],BoidsFlock.SEPARATION_RADIUS)
-
-        #     align_nearby = np.setdiff1d(np.array(rootQuadTree.query(align_circle)),np.array([i]))
-        #     cohesion_nearby = np.setdiff1d(np.array(rootQuadTree.query(cohesion_circle)),np.array([i]))
-        #     separation_nearby = np.setdiff1d(np.array(rootQuadTree.query(separation_circle)),np.array([i]))
-
-        #     align_vel = np.copy(self.boids_vel)
-        #     if len(align_nearby): align_vel = np.delete(align_vel,align_nearby,0)
-
-        #     cohesion_pos = np.copy(self.boids_pos)
-        #     if len(cohesion_nearby): cohesion_pos = np.delete(cohesion_pos,cohesion_nearby,0)
-
-        #     separation_pos = np.copy(self.boids_pos)
-        #     if len(separation_nearby): separation_pos = np.delete(separation_pos,separation_nearby,0)
-        #     boid_pos = self.boids_pos[i,:]
-        #     np.broadcast(boid_pos,separation_pos)
-        #     separation_pos = boid_pos-separation_pos
-            
-        #     align_steering = np.sum(align_vel,axis=0)[:,np.newaxis].T
-        #     cohesion_steering = np.sum(cohesion_pos,axis=0)[:,np.newaxis].T
-        #     separation_steering = np.sum(separation_pos,axis=0)[:,np.newaxis].T
-
-        #     if len(align_nearby): align_steering/=len(align_nearby)
-        #     if len(cohesion_nearby): cohesion_steering/=len(cohesion_nearby)
-        #     if len(separation_nearby): separation_steering/=len(separation_nearby)
-
-        #     align_steering -= self.boids_vel[i,:]
-        #     align_steering = BoidsFlock.setMagnitude(
-        #         align_steering, BoidsFlock.ALIGN_MAX_SPEED)
-        #     if(np.linalg.norm(align_steering) > BoidsFlock.ALIGN_MAX_FORCE):
-        #         align_steering = BoidsFlock.setMagnitude(
-        #             align_steering, BoidsFlock.ALIGN_MAX_FORCE)
-
-        #     cohesion_steering -= self.boids_pos[i,:]
-        #     cohesion_steering = BoidsFlock.setMagnitude(
-        #         cohesion_steering, BoidsFlock.COHESION_MAX_SPEED)
-        #     cohesion_steering -= self.boids_vel[i,:]
-        #     if(np.linalg.norm(cohesion_steering) > BoidsFlock.COHESION_MAX_FORCE):
-        #         cohesion_steering = BoidsFlock.setMagnitude(
-        #             cohesion_steering, BoidsFlock.COHESION_MAX_FORCE)
-            
-        #     separation_steering = BoidsFlock.setMagnitude(
-        #         separation_steering, BoidsFlock.SEPARATION_MAX_SPEED)
-        #     separation_steering -= self.boids_vel[i,:]
-        #     if(np.linalg.norm(separation_steering) > BoidsFlock.SEPARATION_MAX_FORCE):
-        #         separation_steering = BoidsFlock.setMagnitude(
-        #             separation_steering, BoidsFlock.SEPARATION_MAX_FORCE)
-
-        #     self.boids_acc[i] = align_steering + cohesion_steering - separation_steering
-
-        # self.__update()
 
     def flock(self):
 
