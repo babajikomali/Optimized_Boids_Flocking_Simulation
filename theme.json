@@ -1,0 +1,71 @@
+{
+    "defaults":
+    {
+        "colors":
+        {
+            "normal_bg":"#21282D"
+        }
+    },
+    "button":
+    {
+        "colors":
+        {
+            "normal_bg":"#25292e",
+            "hovered_bg":"#35393e"
+        },
+        "font":
+        {
+            "name":"Jetbrains_Mono",
+            "size":"13",
+            "bold":"0",
+            "italic":"0",
+
+            "regular_resource":
+            {
+                "package":"assets",
+                "resource":"JetBrains Mono Regular Nerd Font Complete Mono Windows Compatible.ttf"
+            },
+            "bold_resource":
+            {
+                "package":"assets",
+                "resource":"JetBrains Mono Bold Nerd Font Complete Mono Windows Compatible.ttf"
+            },
+            "italic_resource":
+            {
+                "package":"assets",
+                "resource":"JetBrains Mono Italic Nerd Font Complete Mono Windows Compatible.ttf"
+            },
+            "bold_italic_resource":
+            {
+                "package":"assets",
+                "resource":"JetBrains Mono Bold Italic Nerd Font Complete Mono Windows Compatible.ttf"   
+            }
+        },
+        "misc":
+        {
+            "shape" : "rounded_rectangle",
+            "shape_corner_radius" : "5",
+            "border_width": "1",
+            "shadow_width": "2",
+            "text_horiz_alignment": "center",
+            "text_vert_alignment": "center"
+        }
+    },
+
+    "horizontal_slider":
+    {
+        "colors":
+        {
+            "normal_bg":"#4C5052",
+            "hovered_bg":"#35393e",
+            "selected_bg":"#25292e",
+            "active_bg":"#193784"
+        },
+        "misc":
+        {
+            "shape":"rounded_rectangle",
+            "enable_arrow_buttons":"1",
+            "sliding_button_width":"10"
+        }
+    }
+}
