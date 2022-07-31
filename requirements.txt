@@ -1,0 +1,9 @@
+certifi @ file:///C:/Windows/TEMP/abs_e9b7158a-aa56-4a5b-87b6-c00d295b01fanefpc8_o/croots/recipe/certifi_1655968940823/work/certifi
+llvmlite==0.38.1
+numba==0.55.2
+numpy==1.22.4
+pygame==2.1.2
+pygame-gui==0.6.4
+python-i18n==0.3.9
+scipy==1.8.1
+wincertstore==0.2
