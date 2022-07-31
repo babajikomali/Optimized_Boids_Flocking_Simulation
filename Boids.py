@@ -100,7 +100,7 @@ def flock(boids, index, align_radius, cohesion_radius, separation_radius,
                 diff[0] = boids[index][0][0] - boids[i][0][0]
                 diff[1] = boids[index][0][1] - boids[i][0][1]
                 # if getMagnitude(diff) > 0 :
-                #     diff[0] /= getMagnitude(diff)
+                #     diff[0] /=  getMagnitude(diff)
                 #     diff[1] /= getMagnitude(diff)
                 separation_steering[0] += diff[0]
                 separation_steering[1] += diff[1]

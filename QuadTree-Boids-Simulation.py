@@ -1,10 +1,7 @@
 import os
 import sys
-import math
 import pygame
 import numpy as np
-
-# supressing the pygame hello message
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = 'hide'
 
@@ -24,7 +21,13 @@ class Circle:
     def isContain(self, point: Point) -> bool:
         diff_x = abs(point.x - self.x)
         diff_y = abs(point.y - self.y)
-        return math.sqrt(diff_x**2 + diff_y**2) <= self.r
+        
+        if diff_x > self.r: return False
+        if diff_y > self.r: return False
+        if diff_x + diff_y <= self.r: return True
+        if diff_x**2 + diff_y**2 <= self.r**2: return True
+
+        return False
 
 class Rectangle:
     def __init__(self, x: float = 0, y: float = 0, w: float = 0, h: float = 0) -> None:
@@ -55,11 +58,25 @@ class Rectangle:
 
 
 class QuadTree:
-    def __init__(self, rect: Rectangle, capacity: int = 0) -> None:
+    def __init__(self,rect: Rectangle, screen: pygame.display ,screen_width: float = 1200.0, screen_height: float = 700.0, capacity: int = 0) -> None:
         self.rect = rect
         self.capacity = capacity
         self.points = []
         self.isDivided = False
+        self.screen = screen
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+
+    def show(self) -> None:
+        pygame_rect = pygame.Rect(self.rect.x-self.rect.w, self.screen_height-(self.rect.y+
+                                            self.rect.h), self.rect.w*2, self.rect.h*2)
+        pygame.draw.rect(self.screen, (0, 255, 0), pygame_rect, 1)
+        if self.isDivided == False:
+            return
+        self.northeast.show()
+        self.northwest.show()
+        self.southeast.show()
+        self.southwest.show()
 
     def subdivide(self) -> None:
         x, y, w, h = self.rect.x, self.rect.y, self.rect.w, self.rect.h
@@ -67,10 +84,10 @@ class QuadTree:
         nw = Rectangle(x-w/2, y+h/2, w/2, h/2)
         se = Rectangle(x+w/2, y-h/2, w/2, h/2)
         sw = Rectangle(x-w/2, y-h/2, w/2, h/2)
-        self.northeast = QuadTree(ne, self.capacity)
-        self.northwest = QuadTree(nw, self.capacity)
-        self.southeast = QuadTree(se, self.capacity)
-        self.southwest = QuadTree(sw, self.capacity)
+        self.northeast = QuadTree(ne,self.screen,self.screen_width,self.screen_height,self.capacity)
+        self.northwest = QuadTree(nw,self.screen,self.screen_width,self.screen_height,self.capacity)
+        self.southeast = QuadTree(se,self.screen,self.screen_width,self.screen_height,self.capacity)
+        self.southwest = QuadTree(sw,self.screen,self.screen_width,self.screen_height,self.capacity)
         self.isDivided = True
 
     def insertPoint(self, point: Point) -> bool:
@@ -108,16 +125,16 @@ class QuadTree:
 
 class BoidsFlock:
 
-    ALIGN_RADIUS = 50
-    ALIGN_MAX_FORCE = 5.0
+    ALIGN_RADIUS = 1
+    ALIGN_MAX_FORCE = 0.3
     ALIGN_MAX_SPEED = 4.0
 
-    COHESION_RADIUS = 50
-    COHESION_MAX_FORCE = 0.2
+    COHESION_RADIUS = 1
+    COHESION_MAX_FORCE = 4.0
     COHESION_MAX_SPEED = 4.0
 
-    SEPARATION_RADIUS = 50
-    SEPARATION_MAX_FORCE = 0.2
+    SEPARATION_RADIUS = 1000
+    SEPARATION_MAX_FORCE = 1.0
     SEPARATION_MAX_SPEED = 4.0
 
     def __init__(self, num_boids: int = 10, screen_width: int = 1200, screen_height: int = 700) -> None:
@@ -126,14 +143,15 @@ class BoidsFlock:
         self.screen_height = screen_height
         self.screen_width = screen_width
 
-        # adding boids
         self.boids_pos = np.random.uniform(
             0, max(screen_width, screen_height), size=(num_boids, 2))  # Boids position
-        # Boids velocity
+        
         self.boids_vel = np.random.uniform(-0.5, 0.5, size=(num_boids, 2))
         self.boids_acc = np.zeros(
             shape=(num_boids, 2), dtype=np.float32)  # Boids acceleration
         self.boids_vel = BoidsFlock.setMagnitude(self.boids_vel, 1)
+        self.rootQuadTree = QuadTree(Rectangle(self.screen_width/2, self.screen_height/2,
+                                               self.screen_width/2, self.screen_height/2), 4)
 
     @staticmethod
     def setMagnitude(array: np.ndarray, val: float):
@@ -157,12 +175,6 @@ class BoidsFlock:
             self.boids_vel, BoidsFlock.ALIGN_MAX_SPEED)
 
     def __flock(self):
-        rootQuadTree = QuadTree(Rectangle(self.screen_width/2, self.screen_height/2, 
-                                          self.screen_width/2, self.screen_height/2), 4)
-        
-        for i in range(self.boids):
-            point = Point(self.boids_pos[i][0], self.boids_pos[i][1], i)
-            rootQuadTree.insertPoint(point)
 
         align_indices = []
         cohesion_indices = []
@@ -173,9 +185,9 @@ class BoidsFlock:
             cohesion_circle = Circle(pos[0],pos[1],BoidsFlock.COHESION_RADIUS,i)
             separation_circle = Circle(pos[0],pos[1],BoidsFlock.SEPARATION_RADIUS,i)
 
-            align_nearby = rootQuadTree.query(align_circle)
-            cohesion_nearby = rootQuadTree.query(cohesion_circle)
-            separation_nearby = rootQuadTree.query(separation_circle)
+            align_nearby = self.rootQuadTree.query(align_circle)
+            cohesion_nearby = self.rootQuadTree.query(cohesion_circle)
+            separation_nearby = self.rootQuadTree.query(separation_circle)
 
             align_indices.append(align_nearby)
             cohesion_indices.append(cohesion_nearby)
@@ -402,13 +414,23 @@ class Stimulation(BoidsFlock):
 
             # rendering
             self.screen.fill((0, 0, 0))
+            self.rootQuadTree = QuadTree(Rectangle(self.screen_width/2, self.screen_height/2,
+                                                   self.screen_width/2, self.screen_height/2), 
+                                                   self.screen, self.screen_width, self.screen_height,4)
+            for i in range(self.boids):
+                point = Point(self.boids_pos[i][0], self.boids_pos[i][1], i)
+                self.rootQuadTree.insertPoint(point)
 
-            for i in range(self.boids_pos.shape[0]):
-                pygame.draw.circle(self.screen, (255, 255, 255),
-                                   self.boids_pos[i, :], 3+1)
+            # self.rootQuadTree.show()
+            for pos in self.boids_pos:
                 pygame.draw.circle(self.screen, (0, 255, 0),
-                                   self.boids_pos[i, :], 3)
-
+                           (pos[0], self.screen_height-pos[1]), 4)
+            # for i in range(self.boids_pos.shape[0]):
+            #     pygame.draw.circle(self.screen, (255, 255, 255),
+            #                        self.boids_pos[i, :], 3+1)
+            #     pygame.draw.circle(self.screen, (0, 255, 0),
+            #                        self.boids_pos[i, :], 3)
+            
             text_y = 10
             text_surface = self.FONT.render(
                 f"FPS : {int(self.clock.get_fps())}", True, Stimulation.COLOR_RED)
@@ -419,7 +441,7 @@ class Stimulation(BoidsFlock):
             self.screen.blit(text_surface, (self.screen_width-150, text_y))
             text_y += 15
 
-            self.newflock()
+            self.flock()
 
             # if clock.get_fps() > 60 : flock_stimulation.addBoid()
 
@@ -431,11 +453,20 @@ class Stimulation(BoidsFlock):
 
         pygame.quit()
 
-
 def main():
 
     Stimulation(100).stimulate()
 
-
 if __name__ == '__main__':
-    main()
+    import cProfile
+    cProfile.run('main()','output.dat')
+
+    import pstats
+    from pstats import SortKey
+
+    with open('output_time.txt','w') as f:
+        p = pstats.Stats('output.dat',stream=f)
+        p.sort_stats('time').print_stats()
+    with open('output_calls.txt','w') as f:
+        p = pstats.Stats('output.dat',stream=f)
+        p.sort_stats('calls').print_stats()  

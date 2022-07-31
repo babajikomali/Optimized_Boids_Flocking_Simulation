@@ -2,19 +2,18 @@ import os
 import pygame
 import numpy as np
 
-
 class BoidsFlock:
 
-    ALIGN_RADIUS = 100
+    ALIGN_RADIUS = 1
     ALIGN_MAX_FORCE = 0.2
     ALIGN_MAX_SPEED = 4.0
 
-    COHESION_RADIUS = 100
-    COHESION_MAX_FORCE = 0.2
+    COHESION_RADIUS = 10000
+    COHESION_MAX_FORCE = 0.5
     COHESION_MAX_SPEED = 4.0
 
-    SEPARATION_RADIUS = 50
-    SEPARATION_MAX_FORCE = 0.5
+    SEPARATION_RADIUS = 100
+    SEPARATION_MAX_FORCE = 0.2
     SEPARATION_MAX_SPEED = 4.0
 
     def __init__(self, num_boids: int = 10, screen_width: int = 1200, screen_height: int = 700) -> None:
@@ -163,7 +162,7 @@ color_red = (241, 38, 11)
 color_green = (124, 252, 0)
 exit = False
 
-flock_stimulation = BoidsFlock(100, SCREEN_WIDTH, SCREEN_HEIGHT)
+flock_stimulation = BoidsFlock(250, SCREEN_WIDTH, SCREEN_HEIGHT)
 
 while not exit:
     # keyboard events

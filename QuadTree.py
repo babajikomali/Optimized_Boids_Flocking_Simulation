@@ -1,10 +1,11 @@
 import os
+import math
 import pygame
 import random
 
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 600
-treecount=0
+# Quad-Tree Implementation
 
 class Point:
     def __init__(self, surface: pygame.Surface, x: int = 0, y: int = 0) -> None:
@@ -22,7 +23,7 @@ class Circle:
     def isContain(self, point: Point) -> bool:
         diff_x = abs(point.x - self.x)
         diff_y = abs(point.y - self.y)
-        return (diff_x**2 + diff_y**2) <= self.r
+        return math.sqrt(diff_x**2 + diff_y**2) <= self.r
 
 class Rectangle:
     def __init__(self, x: int = 0, y: int = 0, w: int = 0, h: int = 0) -> None:
@@ -52,17 +53,16 @@ class Rectangle:
         return corner_dist <= circle.r**2
 
 class QuadTree:
-    def __init__(self,capacity: int,surface: pygame.Surface, rect: Rectangle) -> None:
+    def __init__(self, surface: pygame.Surface, rect: Rectangle, capacity: int = 0) -> None:
         self.rect = rect
         self.capacity = capacity
         self.points = []
         self.isDivided = False
         self.surface = surface
-    
-    def showtree(self):
-        x,y,w,h = self.rect.x, self.rect.y, self.rect.w, self.rect.h
-        pygame_rect = pygame.Rect(x-w, SCREEN_HEIGHT-(y+h), w*2, h*2)
-        pygame.draw.rect(self.surface, (255, 255, 255), pygame_rect, 1)
+
+        pygame_rect = pygame.Rect(
+            rect.x-rect.w, SCREEN_HEIGHT-(rect.y+rect.h), rect.w*2, rect.h*2)
+        pygame.draw.rect(surface, (255, 255, 255), pygame_rect, 1)
 
     def subdivide(self) -> None:
         x, y, w, h = self.rect.x, self.rect.y, self.rect.w, self.rect.h
@@ -70,14 +70,10 @@ class QuadTree:
         nw = Rectangle(x-w/2, y+h/2, w/2, h/2)
         se = Rectangle(x+w/2, y-h/2, w/2, h/2)
         sw = Rectangle(x-w/2, y-h/2, w/2, h/2)
-        self.northeast = QuadTree(self.capacity,self.surface,ne)
-        self.northeast.showtree()
-        self.northwest = QuadTree(self.capacity,self.surface,nw)
-        self.northwest.showtree()
-        self.southeast = QuadTree(self.capacity,self.surface,se)
-        self.southeast.showtree()
-        self.southwest = QuadTree(self.capacity,self.surface,sw)
-        self.southwest.showtree()
+        self.northeast = QuadTree(self.surface, ne, self.capacity)
+        self.northwest = QuadTree(self.surface, nw, self.capacity)
+        self.southeast = QuadTree(self.surface, se, self.capacity)
+        self.southwest = QuadTree(self.surface, sw, self.capacity)
         self.isDivided = True
 
     def insertPoint(self, point: Point) -> bool:
@@ -85,26 +81,17 @@ class QuadTree:
             return False
         elif len(self.points) < self.capacity:
             self.points.append(point)
-            print(point.x,end='|')
-            print(point.y)
-            #print(len(self.points))
             return True
         else:
             if not self.isDivided:
                 self.subdivide()
-                global treecount
-                treecount+=1
             if self.northeast.insertPoint(point):
-                print('northeast')
                 return True
             if self.northwest.insertPoint(point):
-                print('northwest')
                 return True
             if self.southeast.insertPoint(point):
-                print('southeast')
                 return True
             if self.southwest.insertPoint(point):
-                print('southwest')
                 return True
 
     def query(self, circle: Circle):
@@ -127,7 +114,7 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = 'hide'
 pygame.init()
 FPS = 60
 FONT = pygame.font.SysFont('ComicNeue-Regular.ttf', 20)
-pygame.display.set_caption('Quad Tree')
+pygame.display.set_caption("Quad Tree")
 screen_width, screen_height = 1200, 600
 screen = pygame.display.set_mode((screen_width, screen_height))
 clock = pygame.time.Clock()
@@ -136,17 +123,25 @@ color_green = (124, 252, 0)
 exit = False
 
 screen.fill((0, 0, 0))
-rootQuadTree = QuadTree(4,screen,Rectangle(600, 300, 600, 300))
+rootQuadTree = QuadTree(screen, Rectangle(600, 300, 600, 300), 4)
 
-for _ in range(15):
+for _ in range(100000):
     rootQuadTree.insertPoint(
         Point(screen, random.randint(0, 1200), random.randint(0, 600)))
 
-print(treecount)
+for point in rootQuadTree.query(Circle(600.0,300.0,100.0)):
+    diff_x = abs(point.x - 600.0)
+    diff_y = abs(point.y - 300.0)
+    print(math.sqrt(diff_x**2 + diff_y**2) <= 100.0)
+    print(point.x,end='|')
+    print(point.y)
+    pygame.draw.circle(screen, (0, 255, 0),
+                       (point.x, SCREEN_HEIGHT-point.y), 3)
 
 while not exit:
-
+    # keyboard events
     for event in pygame.event.get():
+        #closing pygame window
         if event.type == pygame.QUIT or (event.type == pygame.KEYUP and event.key == pygame.K_q):
             exit = True
 
